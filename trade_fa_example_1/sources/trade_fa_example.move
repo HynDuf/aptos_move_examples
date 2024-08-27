@@ -65,8 +65,8 @@ module TradeFACoin::trade_fa_example {
     }
 
     #[view]
-    public fun get_metadata(user: address, asset_symbol: vector<u8>): Object<Metadata> {
-        let asset_address = object::create_object_address(&user, asset_symbol);
+    public fun get_metadata(): Object<Metadata> {
+        let asset_address = object::create_object_address(&@TradeFACoin, ASSET_SYMBOL);
         object::address_to_object<Metadata>(asset_address)
     }
     
@@ -81,23 +81,23 @@ module TradeFACoin::trade_fa_example {
     /// Mint as the owner of metadata object.
     fun mint(to: address, amount: u64) acquires ModuleData, ManagedFungibleAsset {
         let resource_signer = get_resource_signer();
-        let asset = get_metadata(@TradeFACoin, ASSET_SYMBOL);
+        let asset = get_metadata();
         let managed_fungible_asset = authorized_borrow_refs(&resource_signer, asset);
         let to_wallet = primary_fungible_store::ensure_primary_store_exists(to, asset);
         let fa = fungible_asset::mint(&managed_fungible_asset.mint_ref, amount);
         fungible_asset::deposit_with_ref(&managed_fungible_asset.transfer_ref, to_wallet, fa);
     }
 
-    public entry fun transfer(from: &signer, to: address, asset_symbol: vector<u8>, amount: u64) {
+    public entry fun transfer(from: &signer, to: address, asset_address: address, amount: u64) {
         let from_address = signer::address_of(from);
-        let asset = get_metadata(from_address, asset_symbol);
+        let asset = object::address_to_object<Metadata>(asset_address);
         let from_wallet = primary_fungible_store::primary_store(from_address, asset);
         let to_wallet = primary_fungible_store::ensure_primary_store_exists(to, asset);
         fungible_asset::transfer(from, from_wallet, to_wallet, amount);
     }
 
-    public entry fun trade(from: &signer, asset_symbol: vector<u8>, amount: u64) acquires ModuleData, ManagedFungibleAsset {
-        transfer(from, @TradeFACoin, asset_symbol, amount);
+    public entry fun trade(from: &signer, asset_address: address, amount: u64) acquires ModuleData, ManagedFungibleAsset {
+        transfer(from, @TradeFACoin, asset_address, amount);
         let from_address = signer::address_of(from);
         mint(from_address, amount);
     }
